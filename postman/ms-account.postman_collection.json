@@ -1,0 +1,222 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "ms-account – Taller 5 (Redis + Resilience4j)",
+    "description": "Use cases for account-balance-service.\n\nPrerequisites:\n1. Redis on localhost:6379\n2. Mockoon Core Banking on :3001 (mockoon/core-banking.json)\n3. ms-account on :9092 (`mvn spring-boot:run`)\n\nSuggested order: run folders 1 → 5.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:9092" },
+    { "key": "mockoonUrl", "value": "http://localhost:3001" }
+  ],
+  "item": [
+    {
+      "name": "0) Mockoon – Core Banking (sanity)",
+      "item": [
+        {
+          "name": "0.1 Mockoon PREMIUM premium-001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mockoonUrl}}/accounts/core/premium-001/balance",
+            "description": "Expect 200, accountType=PREMIUM, balance=1500."
+          }
+        },
+        {
+          "name": "0.2 Mockoon STANDARD basic-001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mockoonUrl}}/accounts/core/basic-001/balance",
+            "description": "Expect 200, accountType=STANDARD, balance=500."
+          }
+        },
+        {
+          "name": "0.3 Mockoon HTTP 500 fail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mockoonUrl}}/accounts/core/fail/balance",
+            "description": "Expect HTTP 500 (used by CB + Retry demos)."
+          }
+        },
+        {
+          "name": "0.4 Mockoon slow (~3s)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mockoonUrl}}/accounts/core/slow/balance",
+            "description": "Expect 200 after ~3 seconds (used by TimeLimiter)."
+          }
+        },
+        {
+          "name": "0.5 Mockoon default account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mockoonUrl}}/accounts/core/other-999/balance",
+            "description": "Expect 200 default STANDARD, balance=250."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1) Cache Aside + Strategy fee",
+      "item": [
+        {
+          "name": "1.1 GET balance PREMIUM (5% fee) – cache miss",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/premium-001/balance",
+            "description": "Cache miss → Core Banking → Redis save.\nExpect feeApplied=75.00 (5% of 1500), accountType=PREMIUM.\nWatch console: \"Llamando a Core Bancario\"."
+          }
+        },
+        {
+          "name": "1.2 GET balance PREMIUM – cache hit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/premium-001/balance",
+            "description": "Same account again within TTL (60s).\nShould NOT call Core Banking (no \"Llamando a Core Bancario\"). Same fee 75.00."
+          }
+        },
+        {
+          "name": "1.3 GET balance STANDARD (fixed fee 1.00)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/basic-001/balance",
+            "description": "Expect feeApplied=1.00 (FixedFeeStrategy), accountType=STANDARD, balance=500."
+          }
+        },
+        {
+          "name": "1.4 GET balance default account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/other-999/balance",
+            "description": "Default Mockoon body: STANDARD, balance=250, feeApplied=1.00."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Circuit Breaker + Retry",
+      "item": [
+        {
+          "name": "2.1 GET cbretry with fail (fallback ERROR)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/cbretry/fail/balance",
+            "description": "Mockoon returns 500 → Retry (3 attempts) → CircuitBreaker → fallback.\nExpect currency=ERROR, accountType=ERROR, balance=0.\nRepeat a few times to open the circuit."
+          }
+        },
+        {
+          "name": "2.2 GET cbretry healthy (control)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/cbretry/basic-001/balance",
+            "description": "Control call with a healthy accountId. If circuit is OPEN, may still return fallback until half-open."
+          }
+        },
+        {
+          "name": "2.3 Actuator circuitbreakers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/circuitbreakers",
+            "description": "Inspect circuit state for coreBanking."
+          }
+        },
+        {
+          "name": "2.4 Actuator retryevents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/retryevents",
+            "description": "Inspect retry events after calling fail."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3) RateLimiter",
+      "item": [
+        {
+          "name": "3.1 GET rl #1 (allowed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/rl/basic-001/balance",
+            "description": "limitForPeriod=2 per 50s. First call should succeed."
+          }
+        },
+        {
+          "name": "3.2 GET rl #2 (allowed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/rl/basic-001/balance",
+            "description": "Second call within the period should succeed."
+          }
+        },
+        {
+          "name": "3.3 GET rl #3 (fallback ERROR RATELIMITER)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/rl/basic-001/balance",
+            "description": "Third call quickly should hit RateLimiter fallback.\nExpect currency=ERROR RATELIMITER, accountType=ERROR RATELIMITER.\nCheck console DEBUG logs for ratelimiter."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4) TimeLimiter",
+      "item": [
+        {
+          "name": "4.1 GET tl with slow (fallback ERROR TIMELIMITER)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/tl/slow/balance",
+            "description": "Mockoon delays ~3s; TimeLimiter timeout is 1s.\nExpect currency=ERROR TIMELIMITER, accountType=ERROR TIMELIMITER.\nCheck console DEBUG logs for timelimiter."
+          }
+        },
+        {
+          "name": "4.2 GET tl healthy (control)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/accounts/tl/basic-001/balance",
+            "description": "Fast Mockoon response should succeed within the 1s timeout."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5) Actuator health",
+      "item": [
+        {
+          "name": "5.1 Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "5.2 Circuit breaker events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/circuitbreakerevents"
+          }
+        }
+      ]
+    }
+  ]
+}
