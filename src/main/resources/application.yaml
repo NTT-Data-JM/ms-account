@@ -11,7 +11,8 @@ core-banking:
 
 cache:
   account-balance:
-    ttl: 60s
+    # Longer TTL so keys stay visible in Redis Insight during demos
+    ttl: 30m
 
 resilience4j:
   circuitbreaker:
