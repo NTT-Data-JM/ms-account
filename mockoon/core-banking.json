@@ -1,0 +1,215 @@
+{
+  "uuid": "35da1a51-0e11-4929-b2cb-9b1f429275b9",
+  "lastMigration": 33,
+  "name": "Core Banking",
+  "endpointPrefix": "",
+  "latency": 0,
+  "port": 3001,
+  "hostname": "",
+  "folders": [],
+  "routes": [
+    {
+      "uuid": "882e3a1e-234c-4f50-adce-95a35dedcf55",
+      "type": "http",
+      "documentation": "Core banking account balance used by ms-account",
+      "method": "get",
+      "endpoint": "accounts/core/:accountId/balance",
+      "responses": [
+        {
+          "uuid": "20abe4ba-892c-4273-9531-bb714a2c13fa",
+          "body": "{\n  \"accountId\": \"{{urlParam 'accountId'}}\",\n  \"balance\": 1500.00,\n  \"currency\": \"PEN\",\n  \"accountType\": \"PREMIUM\"\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "PREMIUM account",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "params",
+              "modifier": "accountId",
+              "value": "premium-001",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "61cd73f0-e554-4e4e-af22-475556cfca82",
+          "body": "{\n  \"accountId\": \"{{urlParam 'accountId'}}\",\n  \"balance\": 500.00,\n  \"currency\": \"PEN\",\n  \"accountType\": \"STANDARD\"\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "STANDARD account",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "params",
+              "modifier": "accountId",
+              "value": "basic-001",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "cd919c1b-ce66-4aa2-9d7a-beed1fcaed5a",
+          "body": "{\n  \"message\": \"core banking unavailable\"\n}",
+          "latency": 0,
+          "statusCode": 500,
+          "label": "Simulate HTTP 500 (CB + Retry)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "params",
+              "modifier": "accountId",
+              "value": "fail",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "1cb40d3c-5d3d-4b38-8322-4b4a7f3681f1",
+          "body": "{\n  \"accountId\": \"{{urlParam 'accountId'}}\",\n  \"balance\": 800.00,\n  \"currency\": \"PEN\",\n  \"accountType\": \"STANDARD\"\n}",
+          "latency": 3000,
+          "statusCode": 200,
+          "label": "Slow response (TimeLimiter)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "params",
+              "modifier": "accountId",
+              "value": "slow",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "2b28268a-c055-402f-a4db-1c441558c2ea",
+          "body": "{\n  \"accountId\": \"{{urlParam 'accountId'}}\",\n  \"balance\": 250.00,\n  \"currency\": \"PEN\",\n  \"accountType\": \"STANDARD\"\n}",
+          "latency": 100,
+          "statusCode": 200,
+          "label": "Default balance",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null,
+      "streamingMode": null,
+      "streamingInterval": 0
+    }
+  ],
+  "rootChildren": [
+    {
+      "type": "route",
+      "uuid": "882e3a1e-234c-4f50-adce-95a35dedcf55"
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "data": [],
+  "callbacks": []
+}
